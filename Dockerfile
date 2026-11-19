@@ -43,7 +43,6 @@ COPY --from=build --chown=node:node /app/public ./public
 COPY --from=build --chown=node:node /app/prisma ./prisma
 COPY --from=build --chown=node:node /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build --chown=node:node /app/node_modules/prisma ./node_modules/prisma
-COPY --from=build --chown=node:node /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 USER node
 EXPOSE 3000
-CMD ["/bin/sh", "-ec", "./node_modules/.bin/prisma migrate deploy && node server.js"]
+CMD ["/bin/sh", "-ec", "node node_modules/prisma/build/index.js migrate deploy && node server.js"]
