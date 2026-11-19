@@ -1,0 +1,171 @@
+.mapHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.mapNavigation,
+.viewerActions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .2rem;
+  max-inline-size: 100%;
+  padding: .28rem;
+  border-radius: 1.25rem;
+}
+
+.quietAction {
+  display: inline-flex;
+  min-block-size: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: .35rem .75rem;
+  border-radius: .9rem;
+  color: var(--color-ink);
+  font-size: .875rem;
+  font-weight: 650;
+  text-align: center;
+  transition: background-color 140ms ease-out, color 140ms ease-out;
+}
+
+.quietAction:not(:disabled):is(:hover, :active) {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.quietAction:disabled { opacity: .52; }
+
+.mapLayout {
+  display: grid;
+  align-items: start;
+  gap: 1rem;
+}
+
+.workspace { min-inline-size: 0; }
+.workspaceHeader { margin-block-end: 1rem; }
+
+.canvasFrame {
+  min-inline-size: 0;
+  overflow: hidden;
+  border: 1px solid var(--plan-grid-major);
+  border-radius: 1rem;
+  background: var(--plan-paper);
+}
+
+.blankPlan {
+  border: 1px dashed var(--color-board-line);
+  border-radius: 1rem;
+  background: var(--plan-paper);
+  padding: 1rem;
+  color: var(--color-ink-muted);
+  font-size: .875rem;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .55rem 1rem;
+  margin-block-start: 1rem;
+  color: var(--color-ink-muted);
+  font-size: .8125rem;
+}
+
+.scale { font-weight: 650; }
+.roomList { margin-block-start: .5rem; }
+.roomList > li + li { border-block-start: 1px solid var(--color-line); }
+
+.roomRow {
+  display: flex;
+  min-block-size: 3rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  border-radius: .75rem;
+  padding: .6rem .4rem;
+  transition: background-color 140ms ease-out;
+}
+
+.roomRow:where(:hover, :active) { background: var(--color-paper-raised); }
+
+.roomPoints {
+  border-radius: 999px;
+  padding: .22rem .48rem;
+  background: color-mix(in srgb, var(--palette-orange) 13%, var(--color-board-deep));
+  color: var(--reward-ink);
+  font-size: .8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.editorToolbar {
+  display: grid;
+  gap: .38rem;
+  min-inline-size: 0;
+  padding: .45rem;
+  border-radius: 1.3rem;
+}
+
+.toolPicker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(3.1rem, 100%), 1fr));
+  gap: .15rem;
+  min-inline-size: 0;
+}
+
+.toolButton {
+  display: flex;
+  min-inline-size: 0;
+  min-block-size: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: .22rem .4rem;
+  padding: .35rem .25rem;
+  border-radius: .8rem;
+  color: var(--color-ink-muted);
+  font-size: .8125rem;
+  font-weight: 655;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  transition: background-color 140ms ease-out, color 140ms ease-out;
+}
+
+.toolButton svg { flex: none; }
+.toolButton:disabled { opacity: .55; }
+.toolButton:not(:disabled):is(:hover, :active),
+.toolButton[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.toolButton[aria-pressed="true"] { font-weight: 750; }
+
+.documentActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .2rem;
+  border-block-start: 1px solid var(--color-line);
+  padding-block-start: .38rem;
+}
+
+.editorStatus {
+  color: var(--color-ink-muted);
+  font-size: .875rem;
+}
+
+.editorStatus[data-dirty="true"] {
+  color: var(--reward-ink);
+  font-weight: 650;
+}
+
+@media (min-width: 64rem) {
+  .mapLayout { grid-template-columns: minmax(0, 2.4fr) minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roomRow, .quietAction, .toolButton { transition: none; }
+}

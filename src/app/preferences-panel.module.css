@@ -1,0 +1,31 @@
+.title { font-size: 1.075rem; font-weight: 750; }
+.detail { margin-top: .3rem; font-size: .875rem; color: var(--color-ink-muted); }
+.form { display: grid; gap: .9rem; margin-top: .9rem; min-width: 0; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr)); gap: .75rem; }
+.fields label { display: grid; min-width: 0; gap: .35rem; font-size: .875rem; font-weight: 670; }
+.fields select {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: .5rem .6rem;
+  border: 1px solid var(--color-board-line);
+  border-radius: .75rem;
+  background: var(--color-paper-raised);
+  color: var(--color-ink);
+  font-size: 1rem;
+}
+.footer { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem .9rem; }
+.footer button:disabled { opacity: .6; }
+.compact { margin-top: 1rem; border-top: 1px solid var(--color-line); }
+.compact summary {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: .45rem;
+  cursor: pointer;
+  color: var(--accent);
+  font-size: .875rem;
+  font-weight: 675;
+}
+.compact summary svg { flex: none; }
+.currentLanguage { margin-inline-start: auto; color: var(--color-ink-muted); font-weight: 550; }

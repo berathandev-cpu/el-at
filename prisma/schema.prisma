@@ -1,0 +1,292 @@
+// EL AT! — Prisma şeması
+// Kimlik doğrulama, aile, ev haritası ve puanlama/görev akışı.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7 ile bağlantı URL'i artık şemada tutulmuyor: migrate/introspect için
+// `prisma.config.ts`, çalışma zamanı için PrismaClient'a verilen driver adapter
+// (bkz. src/lib/prisma.ts) kullanılıyor.
+datasource db {
+  provider = "postgresql"
+}
+
+/// Doc'taki `users` tablosu (id, google_id, name, avatar_url) + giriş sisteminde
+/// istenen benzersiz kullanıcı kimliği (`publicId`, örn. #ID4839201938483) ve
+/// Auth.js'in Prisma adapter'ının ihtiyaç duyduğu ilişkiler.
+///
+/// Not: Auth.js'in adapter sözleşmesi User modelinde tam olarak `image` ve
+/// `emailVerified` alan adlarını bekliyor (sabit, değiştirilemez). Doc'un
+/// istediği `avatar_url` kolon adını korumak için `image` alanını
+/// `@map("avatar_url")` ile eşliyoruz — Prisma/TS tarafında `image`,
+/// veritabanında `avatar_url`.
+model User {
+  id            String    @id @default(cuid())
+  publicId      String    @unique @map("public_id")
+  googleId      String?   @unique @map("google_id")
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime? @map("email_verified")
+  image         String?   @map("avatar_url")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  accounts         Account[]
+  sessions         Session[]
+  familyMembership FamilyMember?
+  assignedTasks    Task[]       @relation("TaskAssignee")
+  createdTasks     Task[]       @relation("TaskCreator")
+  reviewedTasks    Task[]       @relation("TaskReviewer")
+  pointLedger      PointLedger[]
+  assignedRecurringTasks RecurringTaskRule[] @relation("RecurringTaskAssignee")
+  createdRecurringTasks RecurringTaskRule[] @relation("RecurringTaskCreator")
+
+  @@map("users")
+}
+
+/// Doc'taki `families` tablosu. Temel kural: 1 Ev = 1 Aile = 1 Skor Tablosu.
+model Family {
+  id         String   @id @default(cuid())
+  name       String
+  inviteCode String   @unique @map("invite_code")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  members      FamilyMember[]
+  rooms        Room[]
+  tasks        Task[]
+  pointLedger  PointLedger[]
+  weeklyRewards WeeklyReward[]
+  recurringTasks RecurringTaskRule[]
+  floorPlan     FloorPlan?
+
+  @@map("families")
+}
+
+model FloorPlan {
+  familyId String @id @map("family_id")
+  revision Int    @default(1)
+  shapes   Json
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@map("floor_plans")
+}
+
+/// Doc'taki `family_members` tablosu.
+///
+/// "Kullanıcı birden fazla evde bulunamaz. MVP'de tek ev üyeliği
+/// desteklenecektir." → userId üzerinde @unique ile bu kural veritabanı
+/// seviyesinde zorlanıyor, uygulama koduna güvenilmiyor.
+model FamilyMember {
+  id       String   @id @default(cuid())
+  familyId String   @map("family_id")
+  userId   String   @unique @map("user_id")
+  role     Role
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("family_members")
+}
+
+/// Doc'taki roller. MOTHER/FATHER yönetici yetkilerine sahip (doc: "Baba,
+/// Anne ile aynı yönetici yetkilerine sahiptir"), CHILD yönetim işlemi yapamaz.
+enum Role {
+  MOTHER
+  FATHER
+  CHILD
+
+  @@map("role")
+}
+
+/// Doc → EV HARİTASI: "Her alan: Oda veya Görev Bölgesi olarak oluşturulur."
+enum SpaceType {
+  ROOM // Oda
+  TASK_ZONE // Görev Bölgesi
+
+  @@map("space_type")
+}
+
+/// Doc'taki `rooms` tablosu. Dinamik puan, `baseScore` ile son temizlik
+/// arasındaki günden hesaplanır; kaydedilmiş ayrı bir "anlık puan" yoktur.
+model Room {
+  id            String    @id @default(cuid())
+  familyId      String    @map("family_id")
+  name          String
+  type          SpaceType @default(ROOM)
+  baseScore     Int       @map("base_score")
+  lastCleanedAt DateTime? @map("last_cleaned_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  tasks  Task[]
+  recurringTasks RecurringTaskRule[]
+
+  // Doc'ta belirtilmemiş, kendi kararım: aynı evde iki kez "Mutfak"
+  // oluşturulmasını (muhtemel yanlışlık) veritabanı seviyesinde engelliyorum.
+  @@unique([familyId, name])
+  @@map("rooms")
+}
+
+/// Bir aile üyesine atanmış veya üstlenilmeye açık temizlik/görev kaydı.
+///
+/// Akış: OPEN → COMPLETED → APPROVED | REJECTED. Puan ancak APPROVED
+/// geçişinde, değiştirilemeyen PointLedger kaydıyla verilir.
+model Task {
+  id               String     @id @default(cuid())
+  familyId         String     @map("family_id")
+  roomId           String     @map("room_id")
+  title            String
+  description      String?
+  assignedToUserId String?    @map("assigned_to_user_id")
+  openToClaim      Boolean    @default(false) @map("open_to_claim")
+  createdByUserId  String     @map("created_by_user_id")
+  status           TaskStatus @default(OPEN)
+  submittedAt      DateTime?  @map("submitted_at")
+  pointSnapshot    Int?       @map("point_snapshot")
+  reviewedAt       DateTime?  @map("reviewed_at")
+  reviewedByUserId String?    @map("reviewed_by_user_id")
+  reviewNote       String?    @map("review_note")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+  recurringRuleId  String?    @map("recurring_rule_id")
+  occurrenceDay    DateTime?  @map("occurrence_day") @db.Date
+
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  room     Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  assignee User?  @relation("TaskAssignee", fields: [assignedToUserId], references: [id])
+  creator  User   @relation("TaskCreator", fields: [createdByUserId], references: [id])
+  reviewer User?  @relation("TaskReviewer", fields: [reviewedByUserId], references: [id])
+  ledger   PointLedger?
+  recurringRule RecurringTaskRule? @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
+
+  @@index([familyId, status])
+  @@index([assignedToUserId, status])
+  @@unique([recurringRuleId, occurrenceDay])
+  @@map("tasks")
+}
+
+enum RecurringTaskFrequency {
+  DAILY
+  WEEKLY
+
+  @@map("recurring_task_frequency")
+}
+
+/// An Istanbul calendar rule. Generated tasks are ordinary task records.
+model RecurringTaskRule {
+  id               String                 @id @default(cuid())
+  familyId         String                 @map("family_id")
+  roomId           String                 @map("room_id")
+  assignedToUserId String                 @map("assigned_to_user_id")
+  createdByUserId  String                 @map("created_by_user_id")
+  title            String                 @db.VarChar(80)
+  description      String?                @db.VarChar(280)
+  frequency        RecurringTaskFrequency
+  weekday          Int?
+  startsOn         DateTime               @map("starts_on") @db.Date
+  active           Boolean                @default(true)
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  room     Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  assignee User   @relation("RecurringTaskAssignee", fields: [assignedToUserId], references: [id], onDelete: Restrict)
+  creator  User   @relation("RecurringTaskCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  tasks    Task[]
+
+  @@index([familyId, active, startsOn])
+  @@map("recurring_task_rules")
+}
+
+/// Onaylanan her görev için yalnızca bir kez oluşturulan puan defteri kaydı.
+/// Uygulamada güncelleme/silme işlemi yoktur; geçmiş puanlar sonradan
+/// değiştirilemez.
+model PointLedger {
+  id        String   @id @default(cuid())
+  familyId  String   @map("family_id")
+  userId    String   @map("user_id")
+  taskId    String   @unique @map("task_id")
+  points    Int
+  reason    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([familyId, createdAt])
+  @@index([userId, createdAt])
+  @@map("point_ledger")
+}
+
+enum TaskStatus {
+  OPEN
+  COMPLETED
+  APPROVED
+  REJECTED
+  CANCELLED
+
+  @@map("task_status")
+}
+
+model WeeklyReward {
+  id        String   @id @default(cuid())
+  familyId  String   @map("family_id")
+  weekStart DateTime @map("week_start")
+  title     String   @db.VarChar(100)
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([familyId, weekStart])
+  @@map("weekly_rewards")
+}
+
+/// Auth.js standart adapter modeli — Google OAuth token/hesap bilgisini tutar.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+/// Auth.js standart adapter modeli — oturum.
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+/// Auth.js standart adapter modeli — e-posta doğrulama/magic-link için (MVP'de
+/// kullanılmıyor, yalnızca adapter interface'i gerektirdiği için mevcut).
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}

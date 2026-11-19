@@ -1,0 +1,192 @@
+.sections {
+  display: grid;
+  gap: 1rem;
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.initials {
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  flex: none;
+  place-items: center;
+  border-radius: 1.15rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 1.1rem;
+  font-weight: 750;
+}
+
+.name,
+.sectionTitle {
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.name {
+  font-size: clamp(1.22rem, 3.5vw, 1.65rem);
+}
+
+.sectionTitle {
+  font-size: 1.08rem;
+}
+
+.detail {
+  margin-block-start: .18rem;
+  color: var(--color-ink-muted);
+  font-size: .92rem;
+  overflow-wrap: anywhere;
+}
+
+.publicId {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: .25rem 1rem;
+  margin-block-start: 1.05rem;
+  padding-block-start: .9rem;
+  border-block-start: 1px solid var(--color-line);
+  font-size: .9rem;
+}
+
+.publicId dt {
+  color: var(--color-ink-muted);
+}
+
+.publicId dd {
+  font-weight: 680;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .3rem 1rem;
+}
+
+.actionRows {
+  margin-block-start: .52rem;
+}
+
+.actionRows > .row {
+  min-height: 3.55rem;
+  padding-block: .35rem;
+}
+
+.actionRows > .row + .row {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.link,
+.dangerLink,
+.dialogCancel,
+.confirm {
+  display: inline-flex;
+  min-height: 44px;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: .85rem;
+  padding: .65rem .85rem;
+  font-size: .88rem;
+  font-weight: 700;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.link {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.dangerLink,
+.confirm {
+  color: var(--color-danger);
+  background: var(--color-danger-ink);
+}
+
+.link:hover,
+.dangerLink:hover,
+.confirm:hover {
+  filter: brightness(.95);
+}
+
+.link:disabled,
+.dialogCancel:disabled,
+.confirm:disabled {
+  cursor: wait;
+  opacity: .68;
+}
+
+.dialog {
+  position: fixed;
+  inset: 0;
+  width: min(calc(100% - 2rem), 30rem);
+  max-width: none;
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  padding: clamp(1rem, 4vw, 1.55rem);
+  border-radius: var(--radius-card);
+  color: var(--color-ink);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.dialog::backdrop {
+  background: #242b3275;
+}
+
+.dialogDescription {
+  margin-block-start: .7rem;
+  font-size: .95rem;
+  line-height: 1.45;
+}
+
+.consequences {
+  margin-block: .65rem;
+  padding-inline-start: 1.25rem;
+  list-style: disc;
+  color: var(--color-ink-muted);
+  font-size: .9rem;
+  line-height: 1.5;
+}
+
+.consequences li + li {
+  margin-block-start: .4rem;
+}
+
+.dialogActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .5rem;
+  margin-block-start: 1.1rem;
+}
+
+.dialogCancel {
+  border: 1px solid var(--color-line);
+  color: var(--color-ink);
+  background: var(--color-paper);
+}
+
+.dialogCancel:hover {
+  background: var(--color-paper-raised);
+}
+
+.error {
+  margin-block-start: .85rem;
+  padding: .65rem .8rem;
+  border-radius: .65rem;
+  background: var(--color-danger-ink);
+  color: var(--color-danger);
+  font-size: .9rem;
+}

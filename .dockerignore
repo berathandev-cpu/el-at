@@ -1,0 +1,16 @@
+.git
+.next
+.vercel
+node_modules
+coverage
+playwright-report
+test-results
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/client_secret*.json
+**/*.dump
+**/*.log
+**/*.zip
+**/*.tsbuildinfo
